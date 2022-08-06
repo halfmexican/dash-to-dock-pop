@@ -148,7 +148,7 @@ var DashSlideContainer = GObject.registerClass({
      * Just the child width but taking into account the slided out part
      */
     vfunc_get_preferred_width(forHeight) {
-        let [minWidth, natWidth] = super.vfunc_get_preferred_width(forHeight);
+        let [minWidth, natWidth] = super.vfunc_get_preferred_width(forHeight || 0);
         if ((this.side ==  St.Side.LEFT) || (this.side == St.Side.RIGHT)) {
             minWidth = (minWidth - this._slideoutSize) * this.slideX + this._slideoutSize;
             natWidth = (natWidth - this._slideoutSize) * this.slideX + this._slideoutSize;
@@ -160,7 +160,7 @@ var DashSlideContainer = GObject.registerClass({
      * Just the child height but taking into account the slided out part
      */
     vfunc_get_preferred_height(forWidth) {
-        let [minHeight, natHeight] = super.vfunc_get_preferred_height(forWidth);
+        let [minHeight, natHeight] = super.vfunc_get_preferred_height(forWidth || 0);
         if ((this.side ==  St.Side.TOP) || (this.side ==  St.Side.BOTTOM)) {
             minHeight = (minHeight - this._slideoutSize) * this.slideX + this._slideoutSize;
             natHeight = (natHeight - this._slideoutSize) * this.slideX + this._slideoutSize;
@@ -204,8 +204,15 @@ var DockedDash = GObject.registerClass({
             reactive: false,
             style_class: positionStyleClass[this._position],
         });
+        
+         if (this.monitorIndex === undefined) {
+            // Hello turkish locale, gjs has instead defined this.monitorİndex
+            // See: https://gitlab.gnome.org/GNOME/gjs/-/merge_requests/742
+            this.monitorIndex = this.monitor_index;
+        }
+        
         this._rtl = (Clutter.get_default_text_direction() == Clutter.TextDirection.RTL);
-
+        
         // Load settings
         let settings = DockManager.settings;
         this._isHorizontal = ((this._position == St.Side.TOP) || (this._position == St.Side.BOTTOM));
@@ -551,6 +558,7 @@ var DockedDash = GObject.registerClass({
                     else
                         this.dash.hideShowAppsButton();
             }
+            
         ], [
             settings,
             'changed::dock-fixed',
@@ -561,6 +569,12 @@ var DockedDash = GObject.registerClass({
                     this._resetPosition();
                     this._updateAutoHideBarriers();
                     this._updateVisibilityMode();
+            }
+               ], [
+            settings,
+            'changed::manualhide',
+            () => {
+                this._updateVisibilityMode();
             }
         ], [
             settings,
@@ -613,7 +627,7 @@ var DockedDash = GObject.registerClass({
      */
     _updateVisibilityMode() {
         let settings = DockManager.settings;
-        if (DockManager.settings.dockFixed) {
+        if (DockManager.settings.dockFixed || DockManager.settings.manualhide) {
             this._autohideIsEnabled = false;
             this._intellihideIsEnabled = false;
         }
@@ -644,6 +658,13 @@ var DockedDash = GObject.registerClass({
      * overview visibility
      */
     _updateDashVisibility() {
+        
+         if (DockManager.settings.manualhide) {
+            this._ignoreHover = true;
+            this._removeAnimations();
+            this._animateOut(0, 0);
+            return;
+        }
         if (Main.overview.visibleTarget)
             return;
 
@@ -690,7 +711,7 @@ var DockedDash = GObject.registerClass({
     }
 
     _onOverviewHiding() {
-        this._ignoreHover = false;
+        //this._ignoreHover = false;
         this._intellihide.enable();
         this._updateDashVisibility();
     }
