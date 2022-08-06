@@ -117,6 +117,11 @@
       <summary>Opacity of the dash background</summary>
       <description>Sets the opacity of the dash background  when in autohide mode.</description>
     </key>
+    <key type="b" name="manualhide">
+      <default>false</default>
+      <summary>Dock not shown on desktop</summary>
+      <description>Enable or disable manualhide mode</description>
+    </key>
     <key type="b" name="intellihide">
       <default>true</default>
       <summary>Dock dodges windows</summary>
@@ -241,6 +246,11 @@
       <default>true</default>
       <summary>Show preview of the open windows</summary>
       <description>Replace open windows list with windows previews</description>
+    </key>
+    <key type="b" name="default-windows-preview-to-open">
+      <default>false</default>
+      <summary>Open windows preview by default</summary>
+      <description>Window previews will show windows by default, rather than hide them behind a drop dowm menu.</description>
     </key>
     <key type="b" name="show-favorites">
       <default>true</default>
