@@ -1055,7 +1055,9 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
                         favs.removeFavorite(this._source.app.get_id());
                     });
                 } else {
-                    let item = this._appendMenuItem(_('Add to Favorites'));
+                     const label = majorVersion >= 42 ? _('Pin to Dash') :
+                        _('Add to Favorites');
+                    let item = this._appendMenuItem(label);
                     item.connect('activate', () => {
                         let favs = AppFavorites.getAppFavorites();
                         favs.addFavorite(this._source.app.get_id());
