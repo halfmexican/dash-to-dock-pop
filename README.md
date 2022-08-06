@@ -34,6 +34,8 @@ sudo apt install gettext
 
 Next use `make` to install the extension into your home directory. A Shell reload is required `Alt+F2 r Enter` under Xorg or under Wayland you may have to logout and login. The extension has to be enabled  with *gnome-extensions-app* (GNOME Extensions) or with *dconf*.
 
+Make sure to disable Cosmic Dock
+
 ```bash
 make
 make install
