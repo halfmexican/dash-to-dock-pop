@@ -16,6 +16,7 @@ const Gettext = imports.gettext.domain('dashtodock');
 const __ = Gettext.gettext;
 const N__ = function(e) { return e };
 
+const Config = imports.misc.config;
 const AppDisplay = imports.ui.appDisplay;
 const AppFavorites = imports.ui.appFavorites;
 const BoxPointer = imports.ui.boxpointer;
