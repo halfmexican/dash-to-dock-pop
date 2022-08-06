@@ -35,7 +35,8 @@ const RunningIndicatorStyle = {
     SEGMENTED: 4,
     SOLID: 5,
     CILIORA: 6,
-    METRO: 7
+    METRO: 7,
+    BINARY: 8
 };
 
 
@@ -688,6 +689,10 @@ var Settings = GObject.registerClass({
             Gio.SettingsBindFlags.SYNC_CREATE);
         this._settings.bind('workspace-agnostic-urgent-windows',
             this._builder.get_object('application_button_urgent_button'),
+            'active',
+            Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('default-windows-preview-to-open',
+            this._builder.get_object('application_default_preview_open_button'),
             'active',
             Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('isolate-monitors',
