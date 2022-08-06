@@ -969,7 +969,7 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
         if (Docking.DockManager.settings.showWindowsPreview) {
             // Display the app windows menu items and the separator between windows
             // of the current desktop and other windows.
-
+            const windows = this._source.getInterestingWindows();
             this._allWindowsMenuItem = new PopupMenu.PopupSubMenuMenuItem(__('All Windows'), false);
             this._allWindowsMenuItem.hide();
             this.addMenuItem(this._allWindowsMenuItem);
