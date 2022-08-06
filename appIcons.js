@@ -971,7 +971,8 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
             // of the current desktop and other windows.
             const windows = this._source.getInterestingWindows();
             this._allWindowsMenuItem = new PopupMenu.PopupSubMenuMenuItem(__('All Windows'), false);
-            this._allWindowsMenuItem.hide();
+            if (windows.length > 0)
+                this.addMenuItem(this._allWindowsMenuItem);
             this.addMenuItem(this._allWindowsMenuItem);
         } else {
             const windows = this._source.getInterestingWindows();
