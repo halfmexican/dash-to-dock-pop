@@ -314,6 +314,12 @@ var LocationAppInfo = GObject.registerClass({
             return null;
         }
     }
+      destroy() {
+        this.location = null;
+        this.icon = null;
+        this.name = null;
+        this.cancellable?.cancel();
+    }
 });
 
 const MountableVolumeAppInfo = GObject.registerClass({
@@ -376,6 +382,8 @@ class MountableVolumeAppInfo extends LocationAppInfo {
         this.disconnect(this._mountChanged);
         this.mount = null;
         this._signalsHandler.destroy();
+        
+        super.destroy();
     }
 
     vfunc_dup() {
@@ -611,6 +619,7 @@ class TrashAppInfo extends LocationAppInfo {
         this._monitor?.disconnect(this._monitorChangedId);
         this._monitor = null;
         this.location = null;
+        super.destroy();
     }
 
     list_actions() {
@@ -1083,13 +1092,8 @@ function unWrapFileManagerApp() {
  * up-to-date as the trash fills and is emptied over time.
  */
 var Trash = class DashToDock_Trash {
-    constructor() {
-        this._cancellable = new Gio.Cancellable();
-    }
 
     destroy() {
-        this._cancellable.cancel();
-        this._cancellable = null;
         this._trashApp?.destroy();
     }
 
@@ -1098,7 +1102,7 @@ var Trash = class DashToDock_Trash {
             return;
 
         this._trashApp = makeLocationApp({
-            appInfo: new TrashAppInfo(this._cancellable),
+             appInfo: new TrashAppInfo(new Gio.Cancellable()),
             fallbackIconName: FALLBACK_TRASH_ICON,
         });
     }
@@ -1211,7 +1215,8 @@ var Removables = class DashToDock_Removables {
                 return;
         }
 
-        const appInfo = new MountableVolumeAppInfo(volume, this._cancellable);
+        const appInfo = new MountableVolumeAppInfo(volume,
+            new Utils.CancellableChild(this._cancellable));
         const volumeApp = makeLocationApp({
             appInfo,
             fallbackIconName: FALLBACK_REMOVABLE_MEDIA_ICON,
