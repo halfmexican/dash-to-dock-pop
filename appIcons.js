@@ -1047,7 +1047,9 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
                 let isFavorite = AppFavorites.getAppFavorites().isFavorite(this._source.app.get_id());
                 const [majorVersion] = Config.PACKAGE_VERSION.split('.');
                 if (isFavorite) {
-                    let item = this._appendMenuItem(_('Remove from Favorites'));
+                    const label = majorVersion >= 42 ? _('Unpin') :
+                        _('Remove from Favorites');
+                    let item = this._appendMenuItem(label);
                     item.connect('activate', () => {
                         let favs = AppFavorites.getAppFavorites();
                         favs.removeFavorite(this._source.app.get_id());
