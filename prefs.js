@@ -210,9 +210,10 @@ var Settings = GObject.registerClass({
 
         // Set a reasonable initial window height
         this.widget.connect('realize', () => {
-            window = this.widget.get_root();
-            window.set_size_request(-1, 850);
-            removeTimeouts(window);
+            const rootWindow = this.widget.get_root();
+            rootWindow.set_size_request(-1, 850);
+            rootWindow.connect('close-request', () => this._onWindowsClosed())
+            removeTimeouts(rootWindow);
             if (SHELL_VERSION >= 42)
                 this.widget.set_size_request(-1, 950);
         });
@@ -226,6 +227,23 @@ var Settings = GObject.registerClass({
 
         this._monitorsConfig = new MonitorsConfig();
         this._bindSettings();
+    }
+    
+    _onWindowsClosed() {
+        if (this._dock_size_timeout) {
+            GLib.source_remove(this._dock_size_timeout);
+            delete this._dock_size_timeout;
+        }
+
+        if (this._icon_size_timeout) {
+            GLib.source_remove(this._icon_size_timeout);
+            delete this._icon_size_timeout;
+        }
+
+        if (this._opacity_timeout) {
+            GLib.source_remove(this._opacity_timeout);
+            delete this._opacity_timeout;
+        }
     }
 
     vfunc_create_closure(builder, handlerName, flags, connectObject) {
