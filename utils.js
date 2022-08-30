@@ -44,17 +44,13 @@ const BasicHandler = class DashToDock_BasicHandler {
         // Call addWithLabel with ags as if they were passed arguments
         this.addWithLabel('generic', ...args);
     }
-    
-    clear() {
-        for (let label in this._storage)
-            this.removeWithLabel(label);
-    }
 
     destroy() {
         this._parentObject?.disconnect(this._destroyId);
         this._parentObject = null;
 
-        this.clear();
+        for( let label in this._storage )
+            this.removeWithLabel(label);
     }
 
     block() {

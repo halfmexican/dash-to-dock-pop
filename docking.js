@@ -2133,16 +2133,14 @@ var DockManager = class DashToDock_DockManager {
             return box;
         }
 
-           if (AppDisplay.BaseAppView?.prototype?._pageForCoords) {
-            // Ensure we handle Dnd events happening on the dock when we're dragging from AppDisplay
-            // Remove when merged https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2002
-            this._methodInjections.addWithLabel('main-dash', AppDisplay.BaseAppView.prototype,
-                '_pageForCoords', function (originalFunction, ...args) {
-                    if (!this._scrollView.has_pointer)
-                        return AppDisplay.SidePages.NONE;
-                    return originalFunction.call(this, ...args);
-                });
-        }
+        // Ensure we handle Dnd events happening on the dock when we're dragging from AppDisplay
+        // Remove when merged https://gitlab.gnome.org/GNOME/gnome-shell/-/merge_requests/2002
+        this._methodInjections.addWithLabel('main-dash', AppDisplay.BaseAppView.prototype,
+            '_pageForCoords', function (originalFunction, ...args) {
+                if (!this._scrollView.has_pointer)
+                    return AppDisplay.SidePages.NONE;
+                return originalFunction.call(this, ...args);
+            });
 
         if (Main.layoutManager._startingUp && Main.sessionMode.hasOverview &&
             this._settings.disableOverviewOnStartup) {
@@ -2308,7 +2306,7 @@ var DockManager = class DashToDock_DockManager {
      * Adjust Panel corners, remove this when 41 won't be supported anymore
      */
     _adjustPanelCorners() {
-        if (!Main.panel._rightCorner || !Main.panel._leftCorner)
+        if (!this._hasPanelCorners())
             return;
 
         let position = Utils.getPosition();
@@ -2325,8 +2323,16 @@ var DockManager = class DashToDock_DockManager {
     }
 
     _revertPanelCorners() {
+        if(!this._hasPanelCorners())
+            return;
+        
         Main.panel._leftCorner?.show();
         Main.panel._rightCorner?.show();
+    }
+    
+    _hasPanelCorners(){
+        return !!Main.panel?._rightCorner &&
+            !!Main.panel?._leftCorner;
     }
 };
 Signals.addSignalMethods(DockManager.prototype);

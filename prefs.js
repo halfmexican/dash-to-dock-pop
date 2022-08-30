@@ -1,5 +1,11 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+
+	
+
+imports.gi.versions.Gtk = '4.0';
+imports.gi.versions.Gdk = '4.0';
+ 
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
@@ -12,6 +18,16 @@ const Signals = imports.signals;
 const Gettext = imports.gettext.domain('dashtodockpop');
 const __ = Gettext.gettext;
 const N__ = function (e) { return e };
+
+try {
+    imports.misc.extensionUtils;
+} catch (e) {
+    const resource = Gio.Resource.load(
+        (GLib.getenv('JHBUILD_PREFIX') || '/usr') +
+        '/share/gnome-shell/org.gnome.Extensions.src.gresource');
+    resource._register();
+    imports.searchPath.push('resource:///org/gnome/Extensions/js');
+} 
 
 const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -42,8 +58,8 @@ const RunningIndicatorStyle = {
 
 
 class MonitorsConfig {
-   static get XML_INTERFACE() {
-        return '<node>\
+   static XML_INTERFACE =
+        '<node>\
             <interface name="org.gnome.Mutter.DisplayConfig">\
                 <method name="GetCurrentState">\
                 <arg name="serial" direction="out" type="u" />\
@@ -54,11 +70,11 @@ class MonitorsConfig {
                 <signal name="MonitorsChanged" />\
             </interface>\
         </node>';
-    }
+    
 
-    static get ProxyWrapper() {
-        return Gio.DBusProxy.makeProxyWrapper(MonitorsConfig.XML_INTERFACE);
-    }
+    static ProxyWrapper 
+        = Gio.DBusProxy.makeProxyWrapper(MonitorsConfig.XML_INTERFACE);
+    
     
     constructor() {
         this._monitorsConfigProxy = new MonitorsConfig.ProxyWrapper(
@@ -213,7 +229,7 @@ var Settings = GObject.registerClass({
             const rootWindow = this.widget.get_root();
             rootWindow.set_size_request(-1, 850);
             rootWindow.connect('close-request', () => this._onWindowsClosed())
-            removeTimeouts(rootWindow);
+            //removeTimeouts(rootWindow);
             if (SHELL_VERSION >= 42)
                 this.widget.set_size_request(-1, 950);
         });
@@ -1178,39 +1194,19 @@ function init() {
 function buildPrefsWidget() {
     let settings = new Settings();
     let widget = settings.widget;
-
-    widget.connect('realize', () => {
-
-        let window = widget.get_root();
-
-        window.connect('close-request', ()=> {
-
-            if(this._dock_size_timeout){
-                GLib.Source.remove(this._dock_size_timeout)
-                this._dock_size_timeout = null;
-            }
-    
-            if(this._icon_size_timeout){
-                GLib.Source.remove(this._icon_size_timeout)
-                this._icon_size_timeout = null;
-            }
-    
-            if(this._opacity_timeout){
-                GLib.Source.remove(this._opacity_timeout)
-                this._dock_size_timeout = null;
-            }
-    
-            if(this._border_radius_timeout){
-                GLib.Source.remove(this._border_radius_timeout)
-                this._border_radius_timeout = null;
-            }
-    
-            if(this._floating_margin_timeout){
-                GLib.Source.remove( this._floating_margin_timeout)
-                this._floating_margin_timeout = null;
-            }
-        });
-    });
     
     return widget;
+}
+
+if (!Me) {
+    GLib.setenv('GSETTINGS_SCHEMA_DIR', './schemas', true);
+    Gtk.init();
+    const loop = GLib.MainLoop.new(null, false);
+    const win = new Gtk.Window();
+    win.set_child(buildPrefsWidget());
+    win.connect('close-request', () => loop.quit());
+    win.present();
+
+	
+    loop.run();
 }

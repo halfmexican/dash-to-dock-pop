@@ -279,26 +279,13 @@ var DockDash = GObject.registerClass({
         if (this._requiresVisibilityTimeout) {
             GLib.source_remove(this._requiresVisibilityTimeout);
             delete this._requiresVisibilityTimeout;
-        }  
-        
-        if (this._ensureActorVisibilityTimeoutId) {
-            GLib.source_remove(this._ensureActorVisibilityTimeoutId);
-            delete this._ensureActorVisibilityTimeoutId;
         }
             
-        if(this._resetHoverTimeoutId){
-            GLib.Source.remove(this._resetHoverTimeoutId);
-            this._resetHoverTimeoutId = null;
-        }
-
         if(this._showLabelTimeoutId){
             GLib.Source.remove(this._showLabelTimeoutId);
             this._showLabelTimeoutId = null;
         }
-
-        
     }
-
 
     _onItemDragBegin() {
         return Dash.Dash.prototype._onItemDragBegin.call(this, ...arguments);
