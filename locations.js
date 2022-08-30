@@ -1286,3 +1286,4 @@ function getRunningApps() {
 function getStartingApps() {
     return getApps().filter(a => a.state === Shell.AppState.STARTING);
 }
+
