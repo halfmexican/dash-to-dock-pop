@@ -341,6 +341,21 @@ var Settings = GObject.registerClass({
         if (button.get_active())
             this._settings.set_enum('dock-position', 3);
     }
+    
+    alignment_center_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 0);
+    }
+    
+    alignment_left_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 1);
+    }
+    
+    alignment_right_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 2);
+    }
 
     icon_size_combo_changed_cb(combo) {
         this._settings.set_int('dash-max-icon-size', this._allIconSizes[combo.get_active()]);
@@ -507,6 +522,21 @@ var Settings = GObject.registerClass({
                 this._builder.get_object('position_left_button').set_active(true);
                 break;
         }
+        
+        // Alignment option
+        let alignment = this._settings.get_enum('dock-alignment');
+
+        switch (alignment) {
+            case 0:
+                this._builder.get_object('alignment_center_button').set_active(true);
+                break;
+            case 1:
+                this._builder.get_object('alignment_left_button').set_active(true);
+                break;
+            case 2:
+                this._builder.get_object('alignment_right_button').set_active(true);
+                break;
+        }       
 
         if (this._rtl) {
             /* Left is Right in rtl as a setting */
