@@ -762,7 +762,7 @@
                                 <property name="draw-value">1</property>
                                 <property name="hexpand">True</property>
                                 <property name="restrict-to-fill-level">False</property>
-                                <property name="round-digits">0</property>
+                                <property name="show-fill-level">True</property>
                                 <property name="valign">baseline</property>
                                 <property name="value-pos">right</property>
                                 <signal name="value-changed" handler="dock_size_scale_value_changed_cb"/>
@@ -873,7 +873,6 @@
                                 <property name="fill-level">1.7976931348623157e+308</property>
                                 <property name="hexpand">True</property>
                                 <property name="restrict-to-fill-level">False</property>
-                                <property name="round-digits">0</property>
                                 <property name="valign">baseline</property>
                                 <property name="value-pos">right</property>
                                 <!-- <signal name="format-value" handler="preview_size_scale_format_value_cb" /> -->
@@ -1980,7 +1979,6 @@
                                     <property name="fill-level">0</property>
                                     <property name="hexpand">1</property>
                                     <property name="restrict-to-fill-level">0</property>
-                                    <property name="round-digits">0</property>
                                     <property name="value-pos">right</property>
                                     <signal name="value-changed" handler="custom_opacity_scale_value_changed_cb"/>
                                   </object>
@@ -2332,7 +2330,6 @@ See the &lt;a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"&gt;G
                             <property name="fill-level">0</property>
                             <property name="hexpand">1</property>
                             <property name="restrict-to-fill-level">0</property>
-                            <property name="round-digits">0</property>
                             <property name="value-pos">right</property>
                             <signal name="value-changed" handler="min_opacity_scale_value_changed_cb"/>
                           </object>
@@ -2361,7 +2358,6 @@ See the &lt;a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html"&gt;G
                             <property name="fill-level">0</property>
                             <property name="hexpand">1</property>
                             <property name="restrict-to-fill-level">0</property>
-                            <property name="round-digits">0</property>
                             <property name="value-pos">right</property>
                             <signal name="value-changed" handler="max_opacity_scale_value_changed_cb"/>
                           </object>
