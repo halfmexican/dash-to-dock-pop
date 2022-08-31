@@ -1403,6 +1403,13 @@ var KeyboardShortcuts = class DashToDock_KeyboardShortcuts {
         this._disableHotKeys();
         this._disableExtraShortcut();
         this._signalsHandler.destroy();
+        
+        for (let dock of DockManager.allDocks) {
+            if (dock._numberOverlayTimeoutId) {
+                GLib.source_remove(dock._numberOverlayTimeoutId);
+                dock._numberOverlayTimeoutId = 0;
+            }
+        }
     }
 
     _enableHotKeys() {
