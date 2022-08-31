@@ -260,6 +260,16 @@ var Settings = GObject.registerClass({
             GLib.source_remove(this._opacity_timeout);
             delete this._opacity_timeout;
         }
+        
+        if(this._border_radius_timeout){
+            GLib.source_remove(this._border_radius_timeout);
+            delete this._border_radius_timeout;
+        }
+        
+        if(this._floating_margin_timeout){
+            Glib.source_remove(this._floating_margin_timeout);
+            delete this._floating_margin_timeout;
+        }
     }
 
     vfunc_create_closure(builder, handlerName, flags, connectObject) {
