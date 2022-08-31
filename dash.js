@@ -286,6 +286,11 @@ var DockDash = GObject.registerClass({
             GLib.Source.remove(this._showLabelTimeoutId);
             this._showLabelTimeoutId = null;
         }
+        
+        if (this._ensureActorVisibilityTimeoutId) {
+            GLib.source_remove(this._ensureActorVisibilityTimeoutId);
+            this._ensureActorVisibilityTimeoutId = null;
+        }
     }
 
     _onItemDragBegin() {
