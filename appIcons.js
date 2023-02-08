@@ -17,7 +17,6 @@ const __ = Gettext.gettext;
 const N__ = function(e) { return e };
 
 const Config = imports.misc.config;
-
 const AppDisplay = imports.ui.appDisplay;
 const AppFavorites = imports.ui.appFavorites;
 const BoxPointer = imports.ui.boxpointer;
@@ -75,6 +74,7 @@ let recentlyClickedAppWindows = null;
 let recentlyClickedAppIndex = 0;
 let recentlyClickedAppMonitor = -1;
 
+
 /**
  * Extend AppIcon
  *
@@ -102,6 +102,10 @@ var DockAbstractAppIcon = GObject.registerClass({
             'urgent', 'urgent', 'urgent',
             GObject.ParamFlags.READWRITE,
             false),
+        'hover': GObject.ParamSpec.boolean(
+            'hover', 'hover', 'hover',
+            GObject.ParamFlags.READWRITE,
+            false),
         'windows-count': GObject.ParamSpec.uint(
             'windows-count', 'windows-count', 'windows-count',
             GObject.ParamFlags.READWRITE,
@@ -117,6 +121,7 @@ var DockAbstractAppIcon = GObject.registerClass({
         this._signalsHandler = new Utils.GlobalSignalsHandler(this);
         this.iconAnimator = iconAnimator;
         this._indicator = new AppIconIndicators.AppIconIndicator(this);
+        this.highlight_border_radius = Docking.DockManager.settings.get_int("border-radius");
 
         // Monitor windows-changes instead of app state.
         // Keep using the same Id and function callback (that is extended)
@@ -135,7 +140,7 @@ var DockAbstractAppIcon = GObject.registerClass({
         // In Wayland sessions, this signal is needed to track the state of windows dragged
         // from one monitor to another. As this is triggered quite often (whenever a new winow
         // of any application opened or moved to a different desktop),
-        // we restrict this signal to  the case when Labels.ISOLATE_MONITORS is true,
+        // we restrict this signal to  the case when 'isolate-monitors' is true,
         // and if there are at least 2 monitors.
         if (Docking.DockManager.settings.isolateMonitors &&
             Main.layoutManager.monitors.length > 1) {
@@ -144,7 +149,7 @@ var DockAbstractAppIcon = GObject.registerClass({
                 'window-entered-monitor',
                 this._onWindowEntered.bind(this));
         }
-
+        
         this.connect('notify::running', () => {
             if (this.running)
                 this.add_style_class_name('running');
@@ -153,11 +158,33 @@ var DockAbstractAppIcon = GObject.registerClass({
         });
 
         this.connect('notify::focused', () => {
-            if (this.focused)
-                this.add_style_class_name('focused');
-            else
-                this.remove_style_class_name('focused');
-        })
+           if (this.focused){
+                if(!Docking.DockManager.settings.extendHeight){
+                    this.add_style_class_name('focused'+this.highlight_border_radius);
+                }else{
+                    this.add_style_class_name('focused');
+                }
+                
+           }else{
+                if(!Docking.DockManager.settings.extendHeight){
+                    this.remove_style_class_name('focused'+this.highlight_border_radius);
+                }else{
+                    this.remove_style_class_name('focused');
+                }
+           }
+        });
+        
+         this.connect('notify::hover', () => {
+            //log(this.highlight_border_radius);
+            if(Docking.DockManager.settings.hideHighlight){
+                this.add_style_class_name('hide-hover');
+                this.remove_style_class_name('hover'+this.highlight_border_radius);
+             } else {
+                 this.remove_style_class_name('hide-hover');
+                 if(!Docking.DockManager.settings.extendHeight)
+                    this.add_style_class_name('hover'+this.highlight_border_radius);
+             }
+        });
 
         this.connect('notify::urgent', () => {
             const icon = this.icon._iconBin;
@@ -184,6 +211,8 @@ var DockAbstractAppIcon = GObject.registerClass({
 
         let keys = ['apply-custom-theme',
                    'running-indicator-style',
+                   'border-radius', 
+                   'extend-height'
                     ];
 
         keys.forEach(key => {
@@ -421,6 +450,12 @@ var DockAbstractAppIcon = GObject.registerClass({
                     const { dockFixed: fixedDock } = Docking.DockManager.settings;
                     let additional_margin = this._isHorizontal && !fixedDock ? Main.overview.dash.height : 0;
                     let verticalMargins = this._menu.actor.margin_top + this._menu.actor.margin_bottom;
+
+                    let scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+                    // Apparently "scale" can be invalid if the monitor is freshly unplugged/plugged in
+                    // So we need to just assume scale is the default of 1 in this case...
+                    if (scale == null || isNaN(scale) || scale < 1) { scale = 1; }
+
                     // Also set a max width to the menu, so long labels (long windows title) get truncated
                     this._menu.actor.style = ('max-height: ' + Math.round(workArea.height - additional_margin - verticalMargins) + 'px;' +
                                               'max-width: 400px');
@@ -532,7 +567,7 @@ var DockAbstractAppIcon = GObject.registerClass({
 
             case clickAction.MINIMIZE_OR_OVERVIEW:
                 // When a single window is present, toggle minimization
-                // If only one windows is present toggle minimization, but only when triggered with the
+                // If only one windows is present toggle minimization, but only when trigggered with the
                 // simple click action (no modifiers, no middle click).
                 if (singleOrUrgentWindows && !modifiers && button == 1) {
                     let w = windows[0];
@@ -669,7 +704,7 @@ var DockAbstractAppIcon = GObject.registerClass({
         }
 
         // Hide overview except when action mode requires it
-        if(shouldHideOverview) {
+        if(Main.overview.visible && shouldHideOverview && this.app.id !== 'pop-cosmic-applications.desktop') {
             Main.overview.hide();
         }
     }
@@ -690,6 +725,8 @@ var DockAbstractAppIcon = GObject.registerClass({
             this._previewMenu.connect('open-state-changed', (menu, isPoppedUp) => {
                 if (!isPoppedUp)
                     this._onMenuPoppedDown();
+                else
+                    this.emit('menu-state-changed', true);
             });
             let id = Main.overview.connect('hiding', () => {
                 this._previewMenu.close();
@@ -700,7 +737,7 @@ var DockAbstractAppIcon = GObject.registerClass({
 
         }
 
-        this.emit('menu-state-changed', !this._previewMenu.isOpen);
+        //this.emit('menu-state-changed', !this._previewMenu.isOpen);
 
         if (this._previewMenu.isOpen)
             this._previewMenu.close();
@@ -724,12 +761,10 @@ var DockAbstractAppIcon = GObject.registerClass({
             // switching to a different workspace, a launch spinning icon is shown and disappers only
             // after a timeout.
             let windows = this.getWindows();
-            if (windows.length > 0) {
+            if (windows.length > 0)
                 Main.activateWindow(windows[0])
-            } else {
+            else
                 this.app.activate();
-                this.animateLaunch();
-            }
         }
     }
 
@@ -803,11 +838,8 @@ var DockAbstractAppIcon = GObject.registerClass({
         // First activate first window so workspace is switched if needed.
         // We don't do this if isolation is on!
         if (!Docking.DockManager.settings.isolateWorkspaces &&
-            !Docking.DockManager.settings.isolateMonitors) {
-            if (!this.running)
-                this.animateLaunch();
+            !Docking.DockManager.settings.isolateMonitors)
             this.app.activate();
-        }
 
         // then activate all other app windows in the current workspace
         let windows = this.getInterestingWindows();
@@ -816,9 +848,13 @@ var DockAbstractAppIcon = GObject.registerClass({
         if (windows.length <= 0)
             return;
 
+        let activatedWindows = 0;
+
         for (let i = windows.length - 1; i >= 0; i--) {
-            if (windows[i].get_workspace()?.index() === activeWorkspace)
+            if (windows[i].get_workspace().index() == activeWorkspace) {
                 Main.activateWindow(windows[i]);
+                activatedWindows++;
+            }
         }
     }
 
@@ -1274,7 +1310,7 @@ function getInterestingWindows(windows, monitorIndex) {
         });
     }
 
-    if (settings.isolateMonitors && monitorIndex >= 0) {
+    if (settings.isolateMonitors) {
         windows = windows.filter(function(w) {
             return w.get_monitor() === monitorIndex;
         });
@@ -1362,9 +1398,6 @@ var DockShowAppsIcon = GObject.registerClass({
     }
 
     popupMenu() {
-        if (Me.metadata.uuid === 'ubuntu-dock@ubuntu.com')
-            return false;
-
         this._removeMenuTimeout();
         this.toggleButton.fake_release();
 
@@ -1486,3 +1519,4 @@ function itemShowLabel()  {
         mode: Clutter.AnimationMode.EASE_OUT_QUAD
     });
 }
+

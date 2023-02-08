@@ -11,7 +11,7 @@ const St = imports.gi.St;
 
 // Use __ () and N__() for the extension gettext domain, and reuse
 // the shell domain with the default _() and N_()
-const Gettext = imports.gettext.domain('dashtodock');
+const Gettext = imports.gettext.domain('dashtodockpop');
 const __ = Gettext.gettext;
 const N__ = function(e) { return e };
 
@@ -576,6 +576,7 @@ const TrashAppInfo = GObject.registerClass({
     },
 },
 class TrashAppInfo extends LocationAppInfo {
+
     static initPromises(file) {
         if (TrashAppInfo._promisified)
             return;
@@ -621,7 +622,7 @@ class TrashAppInfo extends LocationAppInfo {
         this._updateTrashCancellable?.cancel();
         this._monitor?.disconnect(this._monitorChangedId);
         this._monitor = null;
-
+        this.location = null;
         super.destroy();
     }
 
@@ -1296,3 +1297,4 @@ function getRunningApps() {
 function getStartingApps() {
     return getApps().filter(a => a.state === Shell.AppState.STARTING);
 }
+

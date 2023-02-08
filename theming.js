@@ -59,6 +59,9 @@ var ThemeManager = class DashToDock_ThemeManager {
         this._customizedBackground = {red: 0, green: 0, blue: 0, alpha: 0};
         this._customizedBorder = {red: 0, green: 0, blue: 0, alpha: 0};
         this._transparency = new Transparency(dock);
+        this._border_radius = 100;
+        this._floating_margin = 4;
+        this._dock_position = 3
 
         this._signalsHandler.add([
             // When theme changes re-obtain default background color
@@ -271,7 +274,20 @@ var ThemeManager = class DashToDock_ThemeManager {
         let borderInner = '';
         let borderMissingStyle = '';
 
-        if (this._rtl && (position != St.Side.RIGHT))
+        this._border_radius   = settings.get_int('border-radius');
+        this._floating_margin = settings.get_int('floating-margin'); 
+        this._dock_position   = settings.get_enum('dock-position');
+        
+        let position_keys = [
+            "top",
+            "right",
+            "bottom",
+            "left"
+        ]
+        
+        let pos_string = position_keys[this._dock_position];
+
+ 	if (this._rtl && (position != St.Side.RIGHT))
             borderMissingStyle = 'border-right: ' + borderWidth + 'px solid ' +
                    borderColor.to_string() + ';';
         else if (!this._rtl && (position != St.Side.LEFT))
@@ -285,6 +301,23 @@ var ThemeManager = class DashToDock_ThemeManager {
             // The transition-property css rules seems to be unsupported
             this._dash._background.set_style(newStyle);
         }
+
+        if(settings.forceStraightCorner || settings.extendHeight){
+            newStyle = newStyle + `border-radius: 0px;`;
+        }else {
+            newStyle = newStyle + `border-radius: ${this._border_radius}px;`;
+        }
+        this._dash._background.set_style(newStyle);
+       
+
+        if(settings.extendHeight){
+            let marginStyle = `margin-${pos_string}: 0px;`
+            this._dash.set_style(marginStyle);;
+        } else {
+            let marginStyle = `margin-${pos_string}: ${this._floating_margin}px;`;
+            this._dash.set_style(marginStyle);
+        }
+        
 
         // Customize background
         const fixedTransparency = settings.transparencyMode === TransparencyMode.FIXED;
@@ -312,7 +345,9 @@ var ThemeManager = class DashToDock_ThemeManager {
                     'custom-theme-shrink',
                     'custom-theme-running-dots',
                     'extend-height',
-                    'force-straight-corner'];
+                    'force-straight-corner',
+                    'border-radius',
+                    'floating-margin'];
 
         this._signalsHandler.add(...keys.map(key => [
             Docking.DockManager.settings,

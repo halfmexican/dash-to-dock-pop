@@ -1,8 +1,10 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
+
+	
+
 imports.gi.versions.Gtk = '4.0';
 imports.gi.versions.Gdk = '4.0';
-
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;
@@ -12,7 +14,7 @@ const Signals = imports.signals;
 
 // Use __ () and N__() for the extension gettext domain, and reuse
 // the shell domain with the default _() and N_()
-const Gettext = imports.gettext.domain('dashtodock');
+const Gettext = imports.gettext.domain('dashtodockpop');
 const __ = Gettext.gettext;
 const N__ = function (e) { return e };
 
@@ -48,12 +50,13 @@ const RunningIndicatorStyle = {
     SEGMENTED: 4,
     SOLID: 5,
     CILIORA: 6,
-    METRO: 7
+    METRO: 7,
+    BINARY: 8
 };
 
 class MonitorsConfig {
-    static get XML_INTERFACE() {
-        return '<node>\
+   static XML_INTERFACE =
+        '<node>\
             <interface name="org.gnome.Mutter.DisplayConfig">\
                 <method name="GetCurrentState">\
                 <arg name="serial" direction="out" type="u" />\
@@ -64,11 +67,9 @@ class MonitorsConfig {
                 <signal name="MonitorsChanged" />\
             </interface>\
         </node>';
-    }
+    
 
-    static get ProxyWrapper() {
-        return Gio.DBusProxy.makeProxyWrapper(MonitorsConfig.XML_INTERFACE);
-    }
+    static ProxyWrapper = Gio.DBusProxy.makeProxyWrapper(MonitorsConfig.XML_INTERFACE);
 
     constructor() {
         this._monitorsConfigProxy = new MonitorsConfig.ProxyWrapper(
@@ -187,13 +188,15 @@ var Settings = GObject.registerClass({
     Implements: [Gtk.BuilderScope],
 }, class DashToDock_Settings extends GObject.Object {
 
+    
+
     _init() {
         super._init();
 
         if (Me)
-            this._settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.dash-to-dock');
+            this._settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.dash-to-dock-pop');
         else
-            this._settings = new Gio.Settings({schema_id: 'org.gnome.shell.extensions.dash-to-dock'});
+            this._settings = new Gio.Settings({schema_id: 'org.gnome.shell.extensions.dash-to-dock-pop'});
 
         this._appSwitcherSettings = new Gio.Settings({ schema_id: 'org.gnome.shell.app-switcher' });
         this._rtl = (Gtk.Widget.get_default_direction() == Gtk.TextDirection.RTL);
@@ -207,6 +210,12 @@ var Settings = GObject.registerClass({
             this._builder.add_from_file('./Settings.ui');
         }
 
+        this.widget = new Gtk.ScrolledWindow({
+            hscrollbar_policy: Gtk.PolicyType.NEVER,
+            vscrollbar_policy: (SHELL_VERSION >= 42) ?
+                Gtk.PolicyType.NEVER : Gtk.PolicyType.AUTOMATIC,
+        });
+        
         this._notebook = this._builder.get_object('settings_notebook');
 
         if (SHELL_VERSION >= 42) {
@@ -240,7 +249,7 @@ var Settings = GObject.registerClass({
         this._monitorsConfig = new MonitorsConfig();
         this._bindSettings();
     }
-
+    
     _onWindowsClosed() {
         if (this._dock_size_timeout) {
             GLib.source_remove(this._dock_size_timeout);
@@ -255,6 +264,16 @@ var Settings = GObject.registerClass({
         if (this._opacity_timeout) {
             GLib.source_remove(this._opacity_timeout);
             delete this._opacity_timeout;
+        }
+        
+        if(this._border_radius_timeout){
+            GLib.source_remove(this._border_radius_timeout);
+            delete this._border_radius_timeout;
+        }
+        
+        if(this._floating_margin_timeout){
+            Glib.source_remove(this._floating_margin_timeout);
+            delete this._floating_margin_timeout;
         }
     }
 
@@ -279,6 +298,44 @@ var Settings = GObject.registerClass({
         this._settings.set_int('preferred-monitor', -2);
         this._updatingSettings = false;
     }
+    
+     custom_radius_scale_value_changed_cb(scale) {
+        // Avoid settings the size consinuosly
+        if (this._border_radius_timeout > 0)
+               GLib.source_remove(this._border_radius_timeout);
+
+            this._border_radius_timeout = GLib.timeout_add(
+          GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
+          this._settings.set_int('border-radius', scale.get_value());
+          this._border_radius_timeout = 0;
+           return GLib.SOURCE_REMOVE;
+        });
+    }
+    
+    custom_margin_scale_value_changed_cb(scale) {
+        // Avoid settings the size consinuosly
+        if (this._floating_margin_timeout > 0)
+           GLib.source_remove(this._floating_margin_timeout);
+
+        this._floating_margin_timeout = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
+           this._settings.set_int('floating-margin', scale.get_value());
+            this._floating_margin_timeout = 0;
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+    
+     custom_opacity_scale_value_changed_cb(scale) {
+        // Avoid settings the opacity consinuosly as it's change is animated
+        if (this._opacity_timeout > 0)
+            GLib.source_remove(this._opacity_timeout);
+        this._opacity_timeout = GLib.timeout_add(
+          GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
+                this._settings.set_double('background-opacity', scale.get_value());
+               this._opacity_timeout = 0;
+               return GLib.SOURCE_REMOVE;
+        });
+    }
 
     position_top_button_toggled_cb(button) {
         if (button.get_active())
@@ -299,6 +356,21 @@ var Settings = GObject.registerClass({
         if (button.get_active())
             this._settings.set_enum('dock-position', 3);
     }
+    
+    alignment_center_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 0);
+    }
+    
+    alignment_left_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 1);
+    }
+    
+    alignment_right_toggled_cb(button){
+        if(button.get_active())
+            this._settings.set_enum('dock-alignment', 2);
+    }
 
     icon_size_combo_changed_cb(combo) {
         this._settings.set_int('dash-max-icon-size', this._allIconSizes[combo.get_active()]);
@@ -315,9 +387,41 @@ var Settings = GObject.registerClass({
                 return GLib.SOURCE_REMOVE;
             });
     }
+    	
 
+    custom_opacity_scale_format_value_cb(scale, value) {
+        return Math.round(value * 100) + ' %';
+    }
+
+    min_opacity_scale_format_value_cb(scale, value) {
+        return Math.round(value * 100) + ' %';
+    }
+
+    max_opacity_scale_format_value_cb(scale, value) {
+        return Math.round(value * 100) + ' %';
+    }
+
+    all_windows_radio_button_toggled_cb(button) {
+        if (button.get_active())
+            this._settings.set_enum('intellihide-mode', 0);
+    }
+
+
+    focus_application_windows_radio_button_toggled_cb(button) {
+        if (button.get_active())
+            this._settings.set_enum('intellihide-mode', 1);
+    }
+
+
+    maximized_windows_radio_button_toggled_cb(button) {
+        if (button.get_active())
+            this._settings.set_enum('intellihide-mode', 2);
+
+    } 
+    
     icon_size_scale_value_changed_cb(scale) {
         // Avoid settings the size consinuosly
+
         if (this._icon_size_timeout > 0)
             GLib.source_remove(this._icon_size_timeout);
         this._icon_size_timeout = GLib.timeout_add(
@@ -328,6 +432,8 @@ var Settings = GObject.registerClass({
                 return GLib.SOURCE_REMOVE;
             });
     }
+
+   
     preview_size_scale_format_value_cb(scale, value) {
         return value == 0 ? 'auto' : value;
     }
@@ -349,6 +455,7 @@ var Settings = GObject.registerClass({
         // Avoid settings the opacity consinuosly as it's change is animated
         if (this._opacity_timeout > 0)
             GLib.source_remove(this._opacity_timeout);
+            
         this._opacity_timeout = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, SCALE_UPDATE_TIMEOUT, () => {
                 this._settings.set_double('min-alpha', scale.get_value());
@@ -427,7 +534,6 @@ var Settings = GObject.registerClass({
 
     _bindSettings() {
         // Position and size panel
-
         this._updateMonitorsSettings();
         this._monitorsConfig.connect('updated', () => this._updateMonitorsSettings());
         this._settings.connect('changed::preferred-monitor', () => this._updateMonitorsSettings());
@@ -450,6 +556,21 @@ var Settings = GObject.registerClass({
                 this._builder.get_object('position_left_button').set_active(true);
                 break;
         }
+        
+        // Alignment option
+        let alignment = this._settings.get_enum('dock-alignment');
+
+        switch (alignment) {
+            case 0:
+                this._builder.get_object('alignment_center_button').set_active(true);
+                break;
+            case 1:
+                this._builder.get_object('alignment_left_button').set_active(true);
+                break;
+            case 2:
+                this._builder.get_object('alignment_right_button').set_active(true);
+                break;
+        }       
 
         if (this._rtl) {
             /* Left is Right in rtl as a setting */
@@ -472,10 +593,6 @@ var Settings = GObject.registerClass({
             Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('autohide-in-fullscreen',
             this._builder.get_object('autohide_enable_in_fullscreen_checkbutton'),
-            'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        this._settings.bind('show-dock-urgent-notify',
-            this._builder.get_object('show_dock_urgent_notify_checkbutton'),
             'active',
             Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('require-pressure-to-show',
@@ -590,6 +707,18 @@ var Settings = GObject.registerClass({
             dialog.present();
 
         });
+        
+        // Custom Margin Formatter
+        const custom_margin_scale = this._builder.get_object('custom_margin_scale');
+        custom_margin_scale.set_format_value_func((_, value) => {
+            return value + ' px';
+        });
+        
+        // Custom Border Formatter
+        const custom_radius_scale = this._builder.get_object('custom_radius_scale');
+        custom_radius_scale.set_format_value_func((_, value) => {
+            return value + ' px';
+        });
 
         // size options
         const dock_size_scale = this._builder.get_object('dock_size_scale');
@@ -598,6 +727,7 @@ var Settings = GObject.registerClass({
         dock_size_scale.set_format_value_func((_, value) => {
             return Math.round(value * 100) + ' %';
         });
+
         let icon_size_scale = this._builder.get_object('icon_size_scale');
         icon_size_scale.set_range(8, DEFAULT_ICONS_SIZES[0]);
         icon_size_scale.set_value(this._settings.get_int('dash-max-icon-size'));
@@ -608,6 +738,9 @@ var Settings = GObject.registerClass({
             return value + ' px';
         });
         this._builder.get_object('preview_size_scale').set_value(this._settings.get_double('preview-size-scale'));
+        this._builder.get_object('preview_size_scale').set_range(0.0, 0.4);
+        
+        this._builder.get_object('') 
 
         // Corrent for rtl languages
         if (this._rtl) {
@@ -622,6 +755,7 @@ var Settings = GObject.registerClass({
         }
 
         this._settings.bind('icon-size-fixed', this._builder.get_object('icon_size_fixed_checkbutton'), 'active', Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('dash-max-icon-size', this._builder.get_object('icon_size_scale'), 'active', Gio.SettingsBindFlags.DEFAULT)///////////////////////////////////////////////////////////////////////////////////
         this._settings.bind('extend-height', this._builder.get_object('dock_size_extend_checkbutton'), 'active', Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('extend-height', this._builder.get_object('dock_size_scale'), 'sensitive', Gio.SettingsBindFlags.INVERT_BOOLEAN);
 
@@ -659,6 +793,10 @@ var Settings = GObject.registerClass({
             Gio.SettingsBindFlags.SYNC_CREATE);
         this._settings.bind('workspace-agnostic-urgent-windows',
             this._builder.get_object('application_button_urgent_button'),
+            'active',
+            Gio.SettingsBindFlags.DEFAULT);
+        this._settings.bind('default-windows-preview-to-open',
+            this._builder.get_object('application_default_preview_open_button'),
             'active',
             Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('isolate-monitors',
@@ -884,7 +1022,8 @@ var Settings = GObject.registerClass({
         this._settings.bind('apply-custom-theme', this._builder.get_object('customize_theme'), 'sensitive', Gio.SettingsBindFlags.INVERT_BOOLEAN | Gio.SettingsBindFlags.GET);
         this._settings.bind('apply-custom-theme', this._builder.get_object('builtin_theme_switch'), 'active', Gio.SettingsBindFlags.DEFAULT);
         this._settings.bind('custom-theme-shrink', this._builder.get_object('shrink_dash_switch'), 'active', Gio.SettingsBindFlags.DEFAULT);
-
+        this._settings.bind('hide-highlight', this._builder.get_object('hide_highlight_switch'), 'active', Gio.SettingsBindFlags.DEFAULT);
+        
         // Running indicators
         this._builder.get_object('running_indicators_combo').set_active(
             this._settings.get_enum('running-indicator-style')
@@ -956,7 +1095,6 @@ var Settings = GObject.registerClass({
                 'value',
                 Gio.SettingsBindFlags.DEFAULT);
 
-
             dialog.connect('response', (dialog, id) => {
                 // remove the settings box so it doesn't get destroyed;
                 dialog.get_content_area().remove(box);
@@ -991,6 +1129,11 @@ var Settings = GObject.registerClass({
                 this._settings.set_enum('transparency-mode', parseInt(widget.get_active_id()));
             }
         );
+        
+
+        this._builder.get_object('custom_radius_scale').set_value(this._settings.get_int('border-radius'));
+        this._builder.get_object('custom_margin_scale').set_value(this._settings.get_int('floating-margin'));
+
 
         const custom_opacity_scale = this._builder.get_object('custom_opacity_scale');
         custom_opacity_scale.set_value(this._settings.get_double('background-opacity'));
@@ -1020,6 +1163,8 @@ var Settings = GObject.registerClass({
                 this._builder.get_object('dynamic_opacity_button').set_sensitive(true);
             }
         });
+        
+       
 
         // Create dialog for transparency advanced settings
         this._builder.get_object('dynamic_opacity_button').connect('clicked', () => {
@@ -1103,7 +1248,6 @@ var Settings = GObject.registerClass({
             'active', Gio.SettingsBindFlags.INVERT_BOOLEAN);
 
         // About Panel
-
         if (Me)
             this._builder.get_object('extension_version').set_label(Me.metadata.version.toString());
         else
@@ -1118,6 +1262,7 @@ function init() {
 function buildPrefsWidget() {
     let settings = new Settings();
     let widget = settings.widget;
+    
     return widget;
 }
 
@@ -1133,3 +1278,4 @@ if (!Me) {
 
     loop.run();
 }
+

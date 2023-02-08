@@ -303,7 +303,8 @@ var RunningIndicatorDots = class DashToDock_RunningIndicatorDots extends Running
                    'custom-theme-customize-running-dots',
                    'unity-backlit-items',
                    'apply-glossy-effect',
-                   'running-indicator-dominant-color'];
+                   'running-indicator-dominant-color',
+                   'border-radius'];
 
         keys.forEach(function(key) {
             this._signalsHandler.add(
@@ -395,7 +396,7 @@ var RunningIndicatorDots = class DashToDock_RunningIndicatorDots extends Running
         // Define the radius as an arbitrary size, but keep large enough to account
         // for the drawing of the border.
         this._radius = Math.max(this._width/22, this._borderWidth/2);
-        this._padding = 0; // distance from the margin
+        this._padding = 3; // distance from the margin
         this._spacing = this._radius + this._borderWidth; // separation between the dots
      }
 
@@ -649,7 +650,7 @@ var RunningIndicatorBinary = class DashToDock_RunningIndicatorBinary extends Run
             let size =  Math.max(this._width/11, this._borderWidth);
             let padding = this._borderWidth;
             let spacing = Math.ceil(this._width/18);
-            let yOffset = this._height - size;
+            let yOffset = this._height - size + 5;
             let binaryValue = String("0000" + (n >>> 0).toString(2)).slice(-4);
 
             cr.setLineWidth(this._borderWidth);

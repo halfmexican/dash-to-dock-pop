@@ -118,6 +118,7 @@ var DockDash = GObject.registerClass({
         this._isHorizontal = ((this._position == St.Side.TOP) ||
                                (this._position == St.Side.BOTTOM));
 
+        this._alignment = Utils.getAlignment();
         this._dragPlaceholder = null;
         this._dragPlaceholderPos = -1;
         this._animatingPlaceholdersCount = 0;
@@ -133,8 +134,8 @@ var DockDash = GObject.registerClass({
 
         this._dashContainer = new St.BoxLayout({
             name: "dashtodockDashContainer",
-            x_align: Clutter.ActorAlign.CENTER,
-            y_align: Clutter.ActorAlign.CENTER,
+            x_align: this._alignment,
+            y_align: this._alignment,
             vertical: !this._isHorizontal,
             y_expand: this._isHorizontal,
             x_expand: !this._isHorizontal,
@@ -151,9 +152,9 @@ var DockDash = GObject.registerClass({
 
         if (Docking.DockManager.settings.dockExtended) {
             if (!this._isHorizontal) {
-                this._scrollView.y_align = Clutter.ActorAlign.START;
+                this._scrollView.y_align = this._alignment;
             } else {
-                this._scrollView.x_align = Clutter.ActorAlign.START;
+                this._scrollView.x_align = this._alignment;
             }
         }
 
@@ -165,7 +166,7 @@ var DockDash = GObject.registerClass({
             clip_to_allocation: false,
             ...(!this._isHorizontal ? { layout_manager: new DockDashIconsVerticalLayout() } : {}),
             x_align: rtl ? Clutter.ActorAlign.END : Clutter.ActorAlign.START,
-            y_align: this._isHorizontal ? Clutter.ActorAlign.CENTER: Clutter.ActorAlign.START,
+            y_align: this._isHorizontal ? this._alignment : Clutter.ActorAlign.START,
             y_expand: !this._isHorizontal,
             x_expand: this._isHorizontal
         });
@@ -293,7 +294,12 @@ var DockDash = GObject.registerClass({
             GLib.source_remove(this._requiresVisibilityTimeout);
             delete this._requiresVisibilityTimeout;
         }
-
+            
+        if(this._showLabelTimeoutId){
+            GLib.Source.remove(this._showLabelTimeoutId);
+            this._showLabelTimeoutId = null;
+        }
+        
         if (this._ensureActorVisibilityTimeoutId) {
             GLib.source_remove(this._ensureActorVisibilityTimeoutId);
             delete this._ensureActorVisibilityTimeoutId;
@@ -545,8 +551,12 @@ var DockDash = GObject.registerClass({
         appIcon.connect('notify::urgent', () => {
             if (appIcon.urgent) {
                 ensureActorVisibleInScrollView(this._scrollView, item);
-                if (Docking.DockManager.settings.showDockUrgentNotify)
+                const { settings } = Docking.DockManager;
+                const showDockUrgentNotify = settings.showDockUrgentNotify;
+                
+                if (showDockUrgentNotify) {
                     this._requireVisibility();
+                }
             }
         });
 
@@ -746,6 +756,14 @@ var DockDash = GObject.registerClass({
         let running = this._appSystem.get_running();
         const dockManager = Docking.DockManager.getDefault();
         const { settings } = dockManager;
+        
+        if (Docking.DockManager.settings.dockExtended) {
+            if (!this._isHorizontal) {
+                this._scrollView.y_align = this._alignment;
+            } else {
+                this._scrollView.x_align = this._alignment;
+            }
+        }
 
         if (settings.isolateWorkspaces ||
             settings.isolateMonitors) {
