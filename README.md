@@ -1,5 +1,5 @@
 # Dash to Dock for Pop!_OS
-![screenshot](https://github.com/halfmexican/dash-to-dock-pop/blob/ubuntu-dock/media/screenshot.jpg)
+![screenshot](https://github.com/halfmexican/dash-to-dock-pop/blob/ubuntu-dock/media/screenshot.png)
 
 This extensions aims to provide a more customizable dock for Pop! OS, other dock extensions have conflicts with Cosmic Workspaces causes elements of the COSMIC/GNOME shell to break. This extensions removes conflicts and extends functionality. 
 
