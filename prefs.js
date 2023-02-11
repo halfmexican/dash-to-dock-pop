@@ -1,10 +1,4 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
-
-
-	
-
-imports.gi.versions.Gtk = '4.0';
-imports.gi.versions.Gdk = '4.0';
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GObject = imports.gi.GObject;

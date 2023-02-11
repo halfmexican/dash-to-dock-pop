@@ -972,8 +972,8 @@ var DockedDash = GObject.registerClass({
 
         // In case the mouse move away from the dock area before hovering it, in such case the leave event
         // would never be triggered and the dock would stay visible forever.
-        let triggerTimeoutId =  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
-            triggerTimeoutId = 0;
+        this._triggerTimeoutId =  GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
+            this._triggerTimeoutId = 0;
 
             let [x, y, mods] = global.get_pointer();
             let shouldHide = true;
@@ -2227,103 +2227,6 @@ var DockManager = class DashToDock_DockManager {
 
             return box;
         }
-
-        this._vfuncInjections.addWithLabel(Labels.MAIN_DASH, ControlsManagerLayout.prototype,
-            'allocate', function (container) {
-                const oldPostAllocation = this._runPostAllocation;
-                this._runPostAllocation = () => {};
-
-                const monitor = Main.layoutManager.findMonitorForActor(this._container);
-                const workArea = Main.layoutManager.getWorkAreaForMonitor(monitor.index);
-                const startX = workArea.x - monitor.x;
-                const startY = workArea.y - monitor.y;
-                const workAreaBox = new Clutter.ActorBox();
-                workAreaBox.set_origin(startX, startY);
-                workAreaBox.set_size(workArea.width, workArea.height);
-
-                const propertyInjections = new Utils.PropertyInjectionsHandler();
-                propertyInjections.add(Main.layoutManager.panelBox, 'height', { value: workAreaBox.y1 });
-
-                if (Main.layoutManager.panelBox.y === Main.layoutManager.primaryMonitor.y)
-                    workAreaBox.y1 -= startY;
-
-                this.vfunc_allocate(container, workAreaBox);
-
-                propertyInjections.destroy();
-                workAreaBox.y1 = startY;
-                maybeAdjustBoxToDock(undefined, workAreaBox, this.spacing);
-
-                const adjustActorHorizontalAllocation = actor => {
-                    if (!actor.visible || !workAreaBox.x1)
-                        return;
-
-                    const contentBox = actor.get_allocation_box();
-                    contentBox.set_size(workAreaBox.get_width(), contentBox.get_height());
-                    contentBox.set_origin(workAreaBox.x1, contentBox.y1);
-                    actor.allocate(contentBox);
-                };
-
-                [this._searchEntry, this._workspacesThumbnails, this._searchController].forEach(
-                    actor => adjustActorHorizontalAllocation(actor));
-
-                this._runPostAllocation = oldPostAllocation;
-                this._runPostAllocation();
-            });
-
-        // This can be removed or bypassed when GNOME/gnome-shell!1892 will be merged
-        function workspaceBoxOriginFixer(originalFunction, state, workAreaBox, ...args) {
-            const workspaceBox = originalFunction.call(this, state, workAreaBox, ...args);
-            workspaceBox.set_origin(workAreaBox.x1, workspaceBox.y1);
-            return workspaceBox;
-        }
-
-        this._methodInjections.addWithLabel(Labels.MAIN_DASH, [
-            ControlsManagerLayout.prototype,
-            '_computeWorkspacesBoxForState',
-            function (originalFunction, state, ...args) {
-                const box = workspaceBoxOriginFixer.call(this, originalFunction, state, ...args);
-                if (state !== OverviewControls.ControlsState.HIDDEN)
-                    maybeAdjustBoxToDock(state, box, this.spacing);
-                return box;
-            }
-        ], [
-            ControlsManagerLayout.prototype,
-            '_getAppDisplayBoxForState',
-            function (originalFunction, state, ...args) {
-                const { spacing } = this;
-                const box = workspaceBoxOriginFixer.call(this, originalFunction, state, ...args);
-                return maybeAdjustBoxToDock(state, box, spacing);
-            }
-        ]);
-
-        this._vfuncInjections.addWithLabel(Labels.MAIN_DASH, Workspace.WorkspaceBackground.prototype,
-            'allocate', function (box) {
-            this.vfunc_allocate(box);
-
-            // This code has been submitted upstream via GNOME/gnome-shell!1892
-            // so can be removed when that gets merged (or bypassed on newer shell
-            // versions).
-            const monitor = Main.layoutManager.monitors[this._monitorIndex];
-            const [contentWidth, contentHeight] = this._bin.get_content_box().get_size();
-            const [mX1, mX2] = [monitor.x, monitor.x + monitor.width];
-            const [mY1, mY2] = [monitor.y, monitor.y + monitor.height];
-            const [wX1, wX2] = [this._workarea.x, this._workarea.x + this._workarea.width];
-            const [wY1, wY2] = [this._workarea.y, this._workarea.y + this._workarea.height];
-            const xScale = contentWidth / this._workarea.width;
-            const yScale = contentHeight / this._workarea.height;
-            const leftOffset = wX1 - mX1;
-            const topOffset = wY1 - mY1;
-            const rightOffset = mX2 - wX2;
-            const bottomOffset = mY2 - wY2;
-
-            const contentBox = new Clutter.ActorBox();
-            contentBox.set_origin(-leftOffset * xScale, -topOffset * yScale);
-            contentBox.set_size(
-                contentWidth + (leftOffset + rightOffset) * xScale,
-                contentHeight + (topOffset + bottomOffset) * yScale);
-
-            this._backgroundGroup.allocate(contentBox);
-        });
 
         // Reduce the space that the workspaces can use in secondary monitors
         this._methodInjections.addWithLabel(Labels.MAIN_DASH, WorkspacesView.WorkspacesView.prototype,
